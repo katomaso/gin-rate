@@ -1,12 +1,13 @@
-package limit
+package rate
 
 import (
-	"github.com/gin-gonic/gin"
-	"golang.org/x/time/rate"
 	"net/http"
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"golang.org/x/time/rate"
 )
 
 func TestLimitByKey(t *testing.T) {

@@ -1,38 +1,40 @@
-# Description
-An in-memory Gin middleware to limit access rate by custom key and rate.
+# gin-rate
+
+Controll the rate of calls of your (sensitive) endpoints.
+
+## Description
+
+An in-memory Gin middleware to limit access rate by custom key and rate. This code is just an
+extension and update of the original version _github.com/yangxikun/gin-limit-by-key_.
 
 It depends on two library:
 
 * [golang.org/x/time/rate](https://godoc.org/golang.org/x/time/rate): rate limit
 * [github.com/patrickmn/go-cache](https://github.com/patrickmn/go-cache): expire limiter related key
 
-# installation
+The rate limiter uses the token method - for every request, there is a token with default renewal
+period. The limiter starts with all tokens (let's say 10) and once a token is used it becomes
+unavailable for the defined period (e.g. 5 minutes). Thus the client can burst 10 requests in a
+second but then they need to wait full 5 minutes. Or they can behave - make a request every
+minute and they will never run out of tokens.
 
-```
-go get -u github.com/yangxikun/gin-limit-by-key
-```
+It's crucial tu use the limiter for sensitive stuff like account creation and so on. If the account
+creation takes at most 6 calls then it is sensible to set a `rate.OnIP(6, 10*time.Minute)` so there
+can be only one account created every 10 minutes.
 
-# Example
+## Usage
 
 ```go
 package main
 
 import (
-    limit "github.com/yangxikun/gin-limit-by-key"
+    "github.com/katomaso/gin-rate"
     "github.com/gin-gonic/gin"
-    "golang.org/x/time/rate"
-)
 
 func main() {
 	r := gin.Default()
 
-	r.Use(limit.NewRateLimiter(func(c *gin.Context) string {
-		return c.ClientIP() // limit rate by client ip
-	}, func(c *gin.Context) (*rate.Limiter, time.Duration) {
-		return rate.NewLimiter(rate.Every(100*time.Millisecond), 10), time.Hour // limit 10 qps/clientIp and permit bursts of at most 10 tokens, and the limiter liveness time duration is 1 hour
-	}, func(c *gin.Context) {
-		c.AbortWithStatus(429) // handle exceed rate limit request
-	}))
+	r.Use(rate.ByIP(10, 5*time.Minute)) // will allow 10 calls from one IP within 5 minutes (e.g. one call every 30 seconds)
 
 	r.GET("/", func(c *gin.Context) {})
 
